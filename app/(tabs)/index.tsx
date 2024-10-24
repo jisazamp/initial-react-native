@@ -1,12 +1,52 @@
 import ParallaxScrollView from "@/components/ParallaxScrollView";
-import { Image, StyleSheet, TextInput } from "react-native";
+import { Image, StyleSheet, TextInput, Alert, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import { useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { useState, useEffect } from "react";
+import { Session } from "@supabase/supabase-js";
 
 export default function HomeScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
+  const signInWithEmail = async () => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: username,
+      password,
+    });
+
+    if (error) Alert.alert(error.message);
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert(error.message);
+  };
+
+  if (session)
+    return (
+      <View style={{ paddingHorizontal: 10 }}>
+        <ThemedText>Logged in!</ThemedText>
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 10 }]}
+          onPress={() => signOut()}
+        >
+          <ThemedText>Logout</ThemedText>
+        </TouchableOpacity>
+      </View>
+    );
 
   return (
     <ParallaxScrollView
@@ -32,7 +72,7 @@ export default function HomeScreen() {
         value={password}
         onChangeText={setPassword}
       />
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={() => signInWithEmail()}>
         <ThemedText>Iniciar sesión</ThemedText>
       </TouchableOpacity>
     </ParallaxScrollView>
